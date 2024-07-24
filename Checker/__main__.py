@@ -1,8 +1,10 @@
 import sys
+import asyncio
 import pathlib
 
 from Checker.cli import read_user_cli_args, display_check_result
-from Checker.checker import site_is_online
+from Checker.checker import site_is_online, site_is_online_async
+
 
 def main():
     """ Run the Checker """
@@ -12,7 +14,12 @@ def main():
     if not urls:
         print("Error: no URLs to check", file=sys.stderr)
         sys.exit(1)
-    _synchronous_check(urls)
+
+    if user_args.asynchronous:
+        asyncio.run(_asynchronous_check(urls))
+    else:
+        _synchronous_check(urls)
+
 
 def _get_websites_urls(user_args):
     urls = user_args.urls
@@ -32,6 +39,20 @@ def _read_urls_from_file(file):
     else:
         print("Error: input file not found", file=sys.stderr)
     return []
+
+
+async def _asynchronous_check(urls):
+    async def check_url(url):
+        error = ""
+        try:
+            result = await site_is_online_async(url)
+        except Exception as e:
+            result = False
+            error = e
+        display_check_result(result, url, error)
+
+    await asyncio.gather(*(check_url(url) for url in urls))
+
 
 def _synchronous_check(urls):
     for url in urls:
