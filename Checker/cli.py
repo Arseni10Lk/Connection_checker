@@ -30,14 +30,28 @@ def read_user_cli_args():
         action="store_true",
         help="run the connectivity check asynchronously",
     )
+    parser.add_argument(
+        "-t",
+        "--timer",
+        action="store_true",
+        help="display time for checks",
+    )
     return parser.parse_args()
 
 
-def display_check_result(result, url, error=""):
+def display_check_result_wtime(result, url, time, error=""):
     """Display the result of the check"""
     print(f"The status of {url} is:", end=" ")
     if result:
-        print('"Online!" 👍')
+        print(f'"Online!" 👍     Time taken: {time:.3f} sec')
     else:
         print(f'"Offline?" 👎 \n Error: "{error}"')
 
+
+def display_check_result_notime(result, url, error=""):
+    """Display the result of the check"""
+    print(f"The status of {url} is:", end=" ")
+    if result:
+        print(f'"Online!" 👍')
+    else:
+        print(f'"Offline?" 👎 \n Error: "{error}"')

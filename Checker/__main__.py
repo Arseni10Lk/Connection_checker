@@ -1,8 +1,9 @@
 import sys
 import asyncio
 import pathlib
+import time
 
-from Checker.cli import read_user_cli_args, display_check_result
+from Checker.cli import read_user_cli_args, display_check_result_wtime, display_check_result_notime
 from Checker.checker import site_is_online, site_is_online_async
 
 
@@ -15,10 +16,25 @@ def main():
         print("Error: no URLs to check", file=sys.stderr)
         sys.exit(1)
 
-    if user_args.asynchronous:
-        asyncio.run(_asynchronous_check(urls))
+    if user_args.timer:
+
+        start_time_overall = time.time()
+
+        if user_args.asynchronous:
+            asyncio.run(_asynchronous_check_wtime(urls))
+        else:
+            _synchronous_check_wtime(urls)
+
+        end_time_overall = time.time()
+
+        print(f"The check took {end_time_overall-start_time_overall:.3f} sec")
+
     else:
-        _synchronous_check(urls)
+
+        if user_args.asynchronous:
+            asyncio.run(_asynchronous_check_notime(urls))
+        else:
+            _synchronous_check_notime(urls)
 
 
 def _get_websites_urls(user_args):
@@ -41,7 +57,7 @@ def _read_urls_from_file(file):
     return []
 
 
-async def _asynchronous_check(urls):
+async def _asynchronous_check_notime(urls):
     async def check_url(url):
         error = ""
         try:
@@ -49,12 +65,44 @@ async def _asynchronous_check(urls):
         except Exception as e:
             result = False
             error = e
-        display_check_result(result, url, error)
+        display_check_result_notime(result, url, error)
 
     await asyncio.gather(*(check_url(url) for url in urls))
 
 
-def _synchronous_check(urls):
+async def _asynchronous_check_wtime(urls):
+    async def check_url(url):
+        error = ""
+        time_specific = 0
+        try:
+            start_time = time.time()
+            result = await site_is_online_async(url)
+            end_time = time.time()
+            time_specific = end_time - start_time
+        except Exception as e:
+            result = False
+            error = e
+        display_check_result_wtime(result, url, time_specific, error)
+
+    await asyncio.gather(*(check_url(url) for url in urls))
+
+
+def _synchronous_check_wtime(urls):
+    for url in urls:
+        error = ""
+        time_specific = 0
+        try:
+            start_time = time.time()
+            result = site_is_online(url)
+            end_time = time.time()
+            time_specific = end_time - start_time
+        except Exception as e:
+            result = False
+            error = str(e)
+        display_check_result_wtime(result, url, time_specific, error)
+
+
+def _synchronous_check_notime(urls):
     for url in urls:
         error = ""
         try:
@@ -62,7 +110,7 @@ def _synchronous_check(urls):
         except Exception as e:
             result = False
             error = str(e)
-        display_check_result(result,url,error)
+        display_check_result_notime(result, url, error)
 
 if __name__ == "__main__":
     main()
